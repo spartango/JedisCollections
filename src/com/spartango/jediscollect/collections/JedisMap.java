@@ -153,7 +153,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         return byteKey;
     }
 
-    public static Object
+    private static Object
             deserialize(InputStream inputStream) throws IOException {
         if (inputStream == null) {
             throw new IllegalArgumentException("The InputStream must not be null");
@@ -178,7 +178,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         }
     }
 
-    public static Object deserialize(byte[] objectData) throws IOException {
+    private static Object deserialize(byte[] objectData) throws IOException {
         if (objectData == null) {
             throw new IllegalArgumentException("The byte[] must not be null");
         }
