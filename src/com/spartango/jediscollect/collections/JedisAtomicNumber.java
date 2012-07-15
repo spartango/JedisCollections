@@ -7,6 +7,7 @@ import redis.clients.jedis.Transaction;
 
 import com.hazelcast.core.AtomicNumber;
 import com.hazelcast.monitor.LocalAtomicNumberStats;
+import com.spartango.jediscollect.core.JedisBackedObject;
 
 public class JedisAtomicNumber extends JedisBackedObject implements
                                                         AtomicNumber {

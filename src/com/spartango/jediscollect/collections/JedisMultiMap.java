@@ -9,6 +9,7 @@ import redis.clients.jedis.JedisPool;
 
 import com.hazelcast.core.EntryListener;
 import com.hazelcast.core.MultiMap;
+import com.spartango.jediscollect.core.JedisBackedObject;
 
 public class JedisMultiMap<K, V> extends JedisBackedObject implements
                                                           MultiMap<K, V> {

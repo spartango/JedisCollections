@@ -1,4 +1,4 @@
-package com.spartango.jediscollect.collections;
+package com.spartango.jediscollect.core;
 
 import redis.clients.jedis.JedisPool;
 

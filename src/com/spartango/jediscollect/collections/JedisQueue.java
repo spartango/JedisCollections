@@ -5,6 +5,8 @@ import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.spartango.jediscollect.core.JedisBackedObject;
+
 import redis.clients.jedis.JedisPool;
 
 public class JedisQueue<T> extends JedisBackedObject implements

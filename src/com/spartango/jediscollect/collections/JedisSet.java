@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 
+import com.spartango.jediscollect.core.JedisBackedObject;
+
 import redis.clients.jedis.JedisPool;
 
 public class JedisSet<E> extends JedisBackedObject implements Set<E> {
