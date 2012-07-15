@@ -1,6 +1,9 @@
 package com.spartango.jediscollect.collections;
 
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.Response;
+import redis.clients.jedis.Transaction;
 
 import com.hazelcast.core.AtomicNumber;
 import com.hazelcast.monitor.LocalAtomicNumberStats;
@@ -10,16 +13,14 @@ public class JedisAtomicNumber extends JedisBackedObject implements
 
     public JedisAtomicNumber(String key, JedisPool pool) {
         super(key, pool);
-        // TODO Auto-generated constructor stub
     }
 
     public JedisAtomicNumber(String key) {
         super(key);
-        // TODO Auto-generated constructor stub
     }
 
     @Override public void destroy() {
-        // Not sure this makes all that much sense...
+        throw new UnsupportedOperationException();
     }
 
     @Override public Object getId() {
@@ -31,64 +32,107 @@ public class JedisAtomicNumber extends JedisBackedObject implements
     }
 
     @Override public long addAndGet(long arg0) {
-        // TODO Auto-generated method stub
-        return 0;
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = jedis.incrBy(key, arg0);
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value;
     }
 
     @Override public boolean compareAndSet(long arg0, long arg1) {
-        // TODO Auto-generated method stub
-        return false;
+        // Redis does not support this type of operation
+        throw new UnsupportedOperationException();
     }
 
     @Override public long decrementAndGet() {
-        // TODO Auto-generated method stub
-        return 0;
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = jedis.decr(key);
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value;
     }
 
     @Override public long get() {
-        // TODO Auto-generated method stub
-        return 0;
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = Long.parseLong(jedis.get(key));
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value;
     }
 
     @Override public long getAndAdd(long arg0) {
-        // TODO Auto-generated method stub
-        return 0;
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            Transaction transaction = jedis.multi();
+            Response<String> previous = transaction.get(key);
+            transaction.incrBy(key, arg0);
+            transaction.exec();
+
+            value = Long.parseLong(previous.get());
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value;
     }
 
     @Override public long getAndSet(long arg0) {
-        // TODO Auto-generated method stub
-        return 0;
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            String previous = jedis.getSet(key, "" + arg0);
+            value = Long.parseLong(previous);
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value;
     }
 
     @Override public LocalAtomicNumberStats getLocalAtomicNumberStats() {
-        // TODO Auto-generated method stub
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override public String getName() {
-        // TODO Auto-generated method stub
-        return null;
+        return key;
     }
 
     @Override public long incrementAndGet() {
-        // TODO Auto-generated method stub
-        return 0;
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = jedis.incr(key);
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value;
     }
 
     @Override @Deprecated public void lazySet(long arg0) {
-        // TODO Auto-generated method stub
-
+        // This is deprecated, so we won't support it right away
+        throw new UnsupportedOperationException();
     }
 
     @Override public void set(long arg0) {
-        // TODO Auto-generated method stub
-
+        Jedis jedis = pool.getResource();
+        try {
+            jedis.set(key, "" + arg0);
+        } finally {
+            pool.returnResource(jedis);
+        }
     }
 
     @Override @Deprecated public boolean
             weakCompareAndSet(long arg0, long arg1) {
-        // TODO Auto-generated method stub
-        return false;
+        throw new UnsupportedOperationException();
     }
 
 }
