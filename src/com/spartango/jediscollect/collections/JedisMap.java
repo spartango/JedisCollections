@@ -9,6 +9,8 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -118,27 +120,48 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         // For each item in the map
         // Prep each by serializing
         // Put all of them
+        // hmset
     }
 
     @Override public void clear() {
         // TODO Auto-generated method stub
         // Get all the keys
+        // hkeys
         // Delete all of them
+        // hdel
 
     }
 
     @Override public Set<K> keySet() {
         // TODO Auto-generated method stub
+        // hkeys
         return null;
     }
 
     @Override public Collection<V> values() {
-        // TODO Auto-generated method stub
-        return null;
+        // hvals
+        Jedis jedis = pool.getResource();
+        LinkedList<V> values = new LinkedList<>();
+        try {
+            List<byte[]> valueBytes = jedis.hvals(key.getBytes());
+            // For each item
+            // Deserialize it
+            for (byte[] object : valueBytes) {
+                values.add((V) deserialize(object));
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return values;
     }
 
     @Override public Set<java.util.Map.Entry<K, V>> entrySet() {
         // TODO Auto-generated method stub
+        // hgetall
         return null;
     }
 
@@ -156,25 +179,25 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
     private static Object
             deserialize(InputStream inputStream) throws IOException {
         if (inputStream == null) {
-            throw new IllegalArgumentException("The InputStream must not be null");
-        }
-        ObjectInputStream in = null;
-        try {
-            // stream closed in the finally
-            in = new ObjectInputStream(inputStream);
-            return in.readObject();
-
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            throw new IOException();
-        } finally {
+            ObjectInputStream in = null;
             try {
-                if (in != null) {
-                    in.close();
+                in = new ObjectInputStream(inputStream);
+                return in.readObject();
+
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                throw new IOException();
+            } finally {
+                try {
+                    if (in != null) {
+                        in.close();
+                    }
+                } catch (IOException e) {
+                    // Don't really care if the close failed
                 }
-            } catch (IOException ex) {
-                // ignore close exception
             }
+        } else {
+            return null;
         }
     }
 
