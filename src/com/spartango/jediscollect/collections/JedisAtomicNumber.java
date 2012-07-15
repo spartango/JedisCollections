@@ -21,7 +21,12 @@ public class JedisAtomicNumber extends JedisBackedObject implements
     }
 
     @Override public void destroy() {
-        throw new UnsupportedOperationException();
+        Jedis jedis = pool.getResource();
+        try {
+            jedis.del(byteKey);
+        } finally {
+            pool.returnResource(jedis);
+        }
     }
 
     @Override public Object getId() {

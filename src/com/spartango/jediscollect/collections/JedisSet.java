@@ -1,43 +1,75 @@
 package com.spartango.jediscollect.collections;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+import java.util.Vector;
+
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.Transaction;
 
 import com.spartango.jediscollect.core.JedisBackedObject;
-
-import redis.clients.jedis.JedisPool;
 
 public class JedisSet<E> extends JedisBackedObject implements Set<E> {
 
     public JedisSet(String key, JedisPool pool) {
         super(key, pool);
-        // TODO Auto-generated constructor stub
     }
 
     public JedisSet(String key) {
         super(key);
-        // TODO Auto-generated constructor stub
     }
 
     @Override public int size() {
-        // TODO Auto-generated method stub
-        return 0;
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = jedis.scard(key);
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return (int) value;
     }
 
     @Override public boolean isEmpty() {
-        // TODO Auto-generated method stub
-        return false;
+        return size() == 0;
     }
 
     @Override public boolean contains(Object o) {
-        // TODO Auto-generated method stub
-        return false;
+        // sismember
+        Jedis jedis = pool.getResource();
+        boolean value = false;
+        try {
+            value = jedis.sismember(byteKey, serializeObject(o));
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value;
     }
 
     @Override public Iterator<E> iterator() {
-        // TODO Auto-generated method stub
-        return null;
+        return new Iterator<E>() {
+
+            @Override public boolean hasNext() {
+                // TODO Auto-generated method stub
+                return false;
+            }
+
+            @Override public E next() {
+                // TODO Auto-generated method stub
+                return null;
+            }
+
+            @Override public void remove() {
+                // TODO Auto-generated method stub
+
+            }
+        };
     }
 
     @Override public Object[] toArray() {
@@ -51,23 +83,76 @@ public class JedisSet<E> extends JedisBackedObject implements Set<E> {
     }
 
     @Override public boolean add(E e) {
-        // TODO Auto-generated method stub
-        return false;
+        // sadd
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = jedis.sadd(byteKey, serializeObject(e));
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value > 0;
     }
 
     @Override public boolean remove(Object o) {
-        // TODO Auto-generated method stub
-        return false;
+        // srem
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = jedis.srem(byteKey, serializeObject(o));
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value > 0;
     }
 
     @Override public boolean containsAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
+        Jedis jedis = pool.getResource();
+        boolean value = true;
+        try {
+            Transaction transaction = jedis.multi();
+            for (Object o : c) {
+                transaction.sismember(byteKey, serializeObject(o));
+            }
+            List<Object> results = transaction.exec();
+            for (Object result : results) {
+                if (!(Boolean) result) {
+                    value = false;
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value;
     }
 
     @Override public boolean addAll(Collection<? extends E> c) {
-        // TODO Auto-generated method stub
-        return false;
+        // Serialize all the objects
+        Vector<byte[]> objects = new Vector<>(c.size());
+        for (Object o : c) {
+            try {
+                objects.add(serializeObject(o));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // sadd
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = jedis.sadd(byteKey, (byte[][]) objects.toArray());
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value > 0;
     }
 
     @Override public boolean retainAll(Collection<?> c) {
@@ -76,13 +161,33 @@ public class JedisSet<E> extends JedisBackedObject implements Set<E> {
     }
 
     @Override public boolean removeAll(Collection<?> c) {
-        // TODO Auto-generated method stub
-        return false;
+        // Serialize all the objects
+        Vector<byte[]> objects = new Vector<>(c.size());
+        for (Object o : c) {
+            try {
+                objects.add(serializeObject(o));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // srem
+        Jedis jedis = pool.getResource();
+        long value = 0;
+        try {
+            value = jedis.srem(byteKey, (byte[][]) objects.toArray());
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return value > 0;
     }
 
     @Override public void clear() {
-        // TODO Auto-generated method stub
-
+        Jedis jedis = pool.getResource();
+        try {
+            jedis.del(byteKey);
+        } finally {
+            pool.returnResource(jedis);
+        }
     }
-
 }

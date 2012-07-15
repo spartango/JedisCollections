@@ -1,12 +1,6 @@
 package com.spartango.jediscollect.collections;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,12 +10,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.spartango.jediscollect.core.JedisBackedObject;
-
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Response;
 import redis.clients.jedis.Transaction;
+
+import com.spartango.jediscollect.core.JedisBackedObject;
 
 public class JedisMap<K extends Serializable, V extends Serializable> extends
                                                                       JedisBackedObject implements
@@ -55,7 +49,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         Jedis jedis = pool.getResource();
         boolean value = false;
         try {
-            value = jedis.hexists(key.getBytes(), serializeObject(tkey));
+            value = jedis.hexists(byteKey, serializeObject(tkey));
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -73,7 +67,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         Jedis jedis = pool.getResource();
         V value = null;
         try {
-            byte[] object = jedis.hget(key.getBytes(), serializeObject(tkey));
+            byte[] object = jedis.hget(byteKey, serializeObject(tkey));
             value = (V) deserialize(object);
         } catch (IOException e) {
             e.printStackTrace();
@@ -87,9 +81,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
     @Override public V put(K tkey, V value) {
         Jedis jedis = pool.getResource();
         try {
-            jedis.hset(key.getBytes(),
-                       serializeObject(tkey),
-                       serializeObject(value));
+            jedis.hset(byteKey, serializeObject(tkey), serializeObject(value));
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -104,9 +96,9 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         V value = null;
         try {
             Transaction transaction = jedis.multi();
-            Response<byte[]> object = transaction.hget(key.getBytes(),
+            Response<byte[]> object = transaction.hget(byteKey,
                                                        serializeObject(tkey));
-            transaction.hdel(key.getBytes(), serializeObject(tkey));
+            transaction.hdel(byteKey, serializeObject(tkey));
             transaction.exec();
 
             value = (V) deserialize(object.get());
@@ -137,7 +129,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         // hmset
         Jedis jedis = pool.getResource();
         try {
-            jedis.hmset(key.getBytes(), serialMap);
+            jedis.hmset(byteKey, serialMap);
         } finally {
             pool.returnResource(jedis);
         }
@@ -146,15 +138,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
     @Override public void clear() {
         Jedis jedis = pool.getResource();
         try {
-            Set<byte[]> keyBytes = jedis.hkeys(key.getBytes());
-
-            Transaction deleteTransaction = jedis.multi();
-            // For each item
-            // Delete it
-            for (byte[] byteKey : keyBytes) {
-                deleteTransaction.hdel(key.getBytes(), byteKey);
-            }
-            deleteTransaction.exec();
+            jedis.del(byteKey);
         } finally {
             pool.returnResource(jedis);
         }
@@ -165,7 +149,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         Jedis jedis = pool.getResource();
         Set<K> keys = new HashSet<>();
         try {
-            Set<byte[]> keyBytes = jedis.hkeys(key.getBytes());
+            Set<byte[]> keyBytes = jedis.hkeys(byteKey);
             // For each item
             // Deserialize it
             for (byte[] object : keyBytes) {
@@ -186,7 +170,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         Jedis jedis = pool.getResource();
         LinkedList<V> values = new LinkedList<>();
         try {
-            List<byte[]> valueBytes = jedis.hvals(key.getBytes());
+            List<byte[]> valueBytes = jedis.hvals(byteKey);
             // For each item
             // Deserialize it
             for (byte[] object : valueBytes) {
@@ -207,7 +191,7 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         Jedis jedis = pool.getResource();
         HashMap<K, V> localMap = new HashMap<>();
         try {
-            Map<byte[], byte[]> keyValueBytes = jedis.hgetAll(key.getBytes());
+            Map<byte[], byte[]> keyValueBytes = jedis.hgetAll(byteKey);
             // For each item
             // Deserialize it
             for (byte[] tkeyBytes : keyValueBytes.keySet()) {
@@ -226,50 +210,6 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
             pool.returnResource(jedis);
         }
         return localMap.entrySet();
-    }
-
-    private static byte[] serializeObject(Object tkey) throws IOException {
-        // Serialize the key
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutput out = new ObjectOutputStream(bos);
-        out.writeObject(tkey);
-        byte[] byteKey = bos.toByteArray();
-        out.close();
-        bos.close();
-        return byteKey;
-    }
-
-    private static Object
-            deserialize(InputStream inputStream) throws IOException {
-        if (inputStream == null) {
-            ObjectInputStream in = null;
-            try {
-                in = new ObjectInputStream(inputStream);
-                return in.readObject();
-
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-                throw new IOException();
-            } finally {
-                try {
-                    if (in != null) {
-                        in.close();
-                    }
-                } catch (IOException e) {
-                    // Don't really care if the close failed
-                }
-            }
-        } else {
-            return null;
-        }
-    }
-
-    private static Object deserialize(byte[] objectData) throws IOException {
-        if (objectData == null) {
-            throw new IllegalArgumentException("The byte[] must not be null");
-        }
-        ByteArrayInputStream bais = new ByteArrayInputStream(objectData);
-        return deserialize(bais);
     }
 
 }
