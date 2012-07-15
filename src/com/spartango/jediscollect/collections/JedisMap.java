@@ -9,6 +9,8 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -116,26 +118,65 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
     }
 
     @Override public void putAll(Map<? extends K, ? extends V> m) {
-        // TODO Auto-generated method stub
         // For each item in the map
         // Prep each by serializing
         // Put all of them
+        HashMap<byte[], byte[]> serialMap = new HashMap<>();
+        for (K tkey : m.keySet()) {
+            try {
+                serialMap.put(serializeObject(tkey),
+                              serializeObject(m.get(tkey)));
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+
         // hmset
+        Jedis jedis = pool.getResource();
+        try {
+            jedis.hmset(key.getBytes(), serialMap);
+        } finally {
+            pool.returnResource(jedis);
+        }
     }
 
     @Override public void clear() {
-        // TODO Auto-generated method stub
-        // Get all the keys
-        // hkeys
-        // Delete all of them
-        // hdel
+        Jedis jedis = pool.getResource();
+        try {
+            Set<byte[]> keyBytes = jedis.hkeys(key.getBytes());
+
+            Transaction deleteTransaction = jedis.multi();
+            // For each item
+            // Delete it
+            for (byte[] byteKey : keyBytes) {
+                deleteTransaction.hdel(key.getBytes(), byteKey);
+            }
+            deleteTransaction.exec();
+        } finally {
+            pool.returnResource(jedis);
+        }
 
     }
 
     @Override public Set<K> keySet() {
-        // TODO Auto-generated method stub
-        // hkeys
-        return null;
+        Jedis jedis = pool.getResource();
+        Set<K> keys = new HashSet<>();
+        try {
+            Set<byte[]> keyBytes = jedis.hkeys(key.getBytes());
+            // For each item
+            // Deserialize it
+            for (byte[] object : keyBytes) {
+                keys.add((K) deserialize(object));
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return keys;
     }
 
     @Override public Collection<V> values() {
@@ -159,10 +200,30 @@ public class JedisMap<K extends Serializable, V extends Serializable> extends
         return values;
     }
 
-    @Override public Set<java.util.Map.Entry<K, V>> entrySet() {
-        // TODO Auto-generated method stub
-        // hgetall
-        return null;
+    @Override public Set<Map.Entry<K, V>> entrySet() {
+        // hvals
+        Jedis jedis = pool.getResource();
+        HashMap<K, V> localMap = new HashMap<>();
+        try {
+            Map<byte[], byte[]> keyValueBytes = jedis.hgetAll(key.getBytes());
+            // For each item
+            // Deserialize it
+            for (byte[] tkeyBytes : keyValueBytes.keySet()) {
+                // Get the value
+                byte[] tvalueBytes = keyValueBytes.get(tkeyBytes);
+                // Deserialize both key and value
+                K tkey = (K) deserialize(tkeyBytes);
+                V tvalue = (V) deserialize(tvalueBytes);
+                localMap.put(tkey, tvalue);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            pool.returnResource(jedis);
+        }
+        return localMap.entrySet();
     }
 
     private static byte[] serializeObject(Object tkey) throws IOException {
