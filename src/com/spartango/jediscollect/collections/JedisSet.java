@@ -4,7 +4,19 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 
-public class JedisSet<E> implements Set<E> {
+import redis.clients.jedis.JedisPool;
+
+public class JedisSet<E> extends JedisBackedObject implements Set<E> {
+
+    public JedisSet(String key, JedisPool pool) {
+        super(key, pool);
+        // TODO Auto-generated constructor stub
+    }
+
+    public JedisSet(String key) {
+        super(key);
+        // TODO Auto-generated constructor stub
+    }
 
     @Override public int size() {
         // TODO Auto-generated method stub

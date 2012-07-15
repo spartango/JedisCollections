@@ -5,10 +5,23 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import redis.clients.jedis.JedisPool;
+
 import com.hazelcast.core.EntryListener;
 import com.hazelcast.core.MultiMap;
 
-public class JedisMultiMap<K, V> implements MultiMap<K, V> {
+public class JedisMultiMap<K, V> extends JedisBackedObject implements
+                                                          MultiMap<K, V> {
+
+    public JedisMultiMap(String key, JedisPool pool) {
+        super(key, pool);
+        // TODO Auto-generated constructor stub
+    }
+
+    public JedisMultiMap(String key) {
+        super(key);
+        // TODO Auto-generated constructor stub
+    }
 
     @Override public void destroy() {
         // TODO Auto-generated method stub

@@ -5,7 +5,18 @@ import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class JedisQueue<T> implements BlockingQueue<T> {
+import redis.clients.jedis.JedisPool;
+
+public class JedisQueue<T> extends JedisBackedObject implements
+                                                    BlockingQueue<T> {
+
+    public JedisQueue(String key) {
+        super(key);
+    }
+
+    public JedisQueue(String key, JedisPool pool) {
+        super(key, pool);
+    }
 
     @Override public int size() {
         // TODO Auto-generated method stub

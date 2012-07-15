@@ -4,7 +4,19 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-public class JedisMap<K, V> implements Map<K, V> {
+import redis.clients.jedis.JedisPool;
+
+public class JedisMap<K, V> extends JedisBackedObject implements Map<K, V> {
+
+    public JedisMap(String key, JedisPool pool) {
+        super(key, pool);
+        // TODO Auto-generated constructor stub
+    }
+
+    public JedisMap(String key) {
+        super(key);
+        // TODO Auto-generated constructor stub
+    }
 
     @Override public int size() {
         // TODO Auto-generated method stub
